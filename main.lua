@@ -2,6 +2,11 @@ if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
     require("lldebugger").start()
 end
 
+---@class Cell
+---@field occupied boolean
+---@field age number
+---@field next boolean
+
 ---@type love.Image
 local image = nil
 
@@ -13,6 +18,12 @@ local quad_frame = nil
 
 ---@type love.Canvas
 local canvas_bg = nil
+
+---@type Cell[][]
+local grid = {}
+
+local COLOR_NEW = { 229.0 / 255.0, 57.0 / 255.0, 53.0 / 255.0 }
+local COLOR_OLD = { 30.0 / 255.0, 136.0 / 255.0, 229.0 / 255.0 }
 
 function love.load()
     image = love.graphics.newImage("life.png")
@@ -28,6 +39,18 @@ function love.load()
         end
     end
     love.graphics.setCanvas()
+
+    -- init grid
+    for y = 0, GRID_HEIGHT - 1 do
+        grid[y] = {}
+        for x = 0, GRID_WIDTH - 1 do
+            grid[y][x] = {
+                occupied = false,
+                age = 1,
+                next = false
+            }
+        end
+    end
 end
 
 function love.update(dt)
@@ -37,8 +60,17 @@ end
 function love.draw()
     love.graphics.draw(canvas_bg)
 
-    love.graphics.draw(image, quad_cell, 24 * 3, 24)
+    love.graphics.setColor(unpack(COLOR_NEW))
+    for y = 0, GRID_HEIGHT - 1 do
+        for x = 0, GRID_WIDTH - 1 do
+            local cell = grid[y][x]
+            if cell.occupied then
+                love.graphics.draw(image, quad_cell, x * CELL_SIZE, y * CELL_SIZE)
+            end
+        end
+    end
 
+    love.graphics.setColor(1, 1, 1)
     love.graphics.draw(image, quad_frame, 24 * 5, 24)
 end
 
