@@ -25,10 +25,15 @@ local grid = {}
 local COLOR_NEW = { 229.0 / 255.0, 57.0 / 255.0, 53.0 / 255.0 }
 local COLOR_OLD = { 30.0 / 255.0, 136.0 / 255.0, 229.0 / 255.0 }
 
+local STEP_LENGTH = 0.5
+
 local pointer_x = -1
 local pointer_y = -1
 local pointer_button = 0
 local pointer_visible = false
+
+local current_time = 0
+local playing = false
 
 local function update_pointer(x, y)
     pointer_x = math.floor(x / CELL_SIZE)
@@ -42,6 +47,15 @@ local function grid_set(x, y, button)
     end
     if button == 2 then
         grid[y][x].occupied = false
+    end
+end
+
+local function step()
+    for y = 0, GRID_HEIGHT - 1 do
+        for x = 0, GRID_WIDTH - 1 do
+            local cell = grid[y][x]
+            cell.occupied = not cell.occupied
+        end
     end
 end
 
@@ -74,7 +88,13 @@ function love.load()
 end
 
 function love.update(dt)
-
+    if playing then
+        current_time = current_time + dt
+        while current_time > STEP_LENGTH do
+            step()
+            current_time = current_time - STEP_LENGTH
+        end
+    end
 end
 
 function love.draw()
@@ -91,7 +111,7 @@ function love.draw()
         end
     end
 
-    if pointer_visible then
+    if pointer_visible and not playing then
         love.graphics.setColor(1, 1, 1)
         love.graphics.draw(image, quad_frame, CELL_SIZE * pointer_x, CELL_SIZE * pointer_y)
     end
@@ -99,7 +119,7 @@ end
 
 function love.mousepressed(x, y, button, istouch, presses)
     update_pointer(x, y)
-    if pointer_visible then
+    if pointer_visible and not playing then
         grid_set(pointer_x, pointer_y, button)
         if button == 1 or button == 2 then
             pointer_button = button
@@ -109,7 +129,7 @@ end
 
 function love.mousemoved(x, y, dx, dy, istouch)
     update_pointer(x, y)
-    if pointer_visible then
+    if pointer_visible and not playing then
         if pointer_button > 0 then
             grid_set(pointer_x, pointer_y, pointer_button)
         end
@@ -122,4 +142,21 @@ end
 
 function love.mousefocus(f)
     pointer_visible = f
+end
+
+function love.keypressed(key, scancode, isrepeat)
+    if isrepeat then
+        return
+    end
+    if key == "space" then
+        step()
+    elseif key == "return" then
+        playing = not playing
+        if playing then
+            current_time = STEP_LENGTH / 2
+            love.window.setTitle("[Playing] Life")
+        else
+            love.window.setTitle("Life")
+        end
+    end
 end
