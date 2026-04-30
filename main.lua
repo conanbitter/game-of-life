@@ -26,6 +26,7 @@ local COLOR_NEW = { 229.0 / 255.0, 57.0 / 255.0, 53.0 / 255.0 }
 local COLOR_OLD = { 30.0 / 255.0, 136.0 / 255.0, 229.0 / 255.0 }
 
 local STEP_LENGTH = 0.1
+local MAX_LIFE = 20
 
 local pointer_x = -1
 local pointer_y = -1
@@ -34,6 +35,14 @@ local pointer_visible = false
 
 local current_time = 0
 local playing = false
+
+local function lerp_color(color1, color2, k)
+    return {
+        color1[1] * (1.0 - k) + color2[1] * k,
+        color1[2] * (1.0 - k) + color2[2] * k,
+        color1[3] * (1.0 - k) + color2[3] * k
+    }
+end
 
 local function update_pointer(x, y)
     pointer_x = math.floor(x / CELL_SIZE)
@@ -95,6 +104,12 @@ local function step()
     for y = 0, GRID_HEIGHT - 1 do
         for x = 0, GRID_WIDTH - 1 do
             local cell = grid[y][x]
+            if cell.occupied and cell.next and cell.age < MAX_LIFE - 1 then
+                cell.age = cell.age + 1
+            end
+            if cell.next and not cell.occupied then
+                cell.age = 1
+            end
             cell.occupied = cell.next
         end
     end
@@ -142,11 +157,13 @@ function love.draw()
     love.graphics.setColor(1, 1, 1)
     love.graphics.draw(canvas_bg)
 
-    love.graphics.setColor(unpack(COLOR_NEW))
+
     for y = 0, GRID_HEIGHT - 1 do
         for x = 0, GRID_WIDTH - 1 do
             local cell = grid[y][x]
             if cell.occupied then
+                local k = (cell.age - 1) / (MAX_LIFE - 1)
+                love.graphics.setColor(unpack(lerp_color(COLOR_NEW, COLOR_OLD, k)))
                 love.graphics.draw(image, quad_cell, x * CELL_SIZE, y * CELL_SIZE)
             end
         end
