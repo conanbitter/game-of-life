@@ -25,6 +25,26 @@ local grid = {}
 local COLOR_NEW = { 229.0 / 255.0, 57.0 / 255.0, 53.0 / 255.0 }
 local COLOR_OLD = { 30.0 / 255.0, 136.0 / 255.0, 229.0 / 255.0 }
 
+local pointer_x = -1
+local pointer_y = -1
+local pointer_button = 0
+local pointer_visible = false
+
+local function update_pointer(x, y)
+    pointer_x = math.floor(x / CELL_SIZE)
+    pointer_y = math.floor(y / CELL_SIZE)
+end
+
+local function grid_set(x, y, button)
+    if button == 1 and grid[y][x].occupied == false then
+        grid[y][x].occupied = true
+        grid[y][x].age = 1
+    end
+    if button == 2 then
+        grid[y][x].occupied = false
+    end
+end
+
 function love.load()
     image = love.graphics.newImage("life.png")
     local quad_bg = love.graphics.newQuad(0, 0, 24, 24, image)
@@ -58,6 +78,7 @@ function love.update(dt)
 end
 
 function love.draw()
+    love.graphics.setColor(1, 1, 1)
     love.graphics.draw(canvas_bg)
 
     love.graphics.setColor(unpack(COLOR_NEW))
@@ -70,18 +91,35 @@ function love.draw()
         end
     end
 
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.draw(image, quad_frame, 24 * 5, 24)
+    if pointer_visible then
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.draw(image, quad_frame, CELL_SIZE * pointer_x, CELL_SIZE * pointer_y)
+    end
 end
 
 function love.mousepressed(x, y, button, istouch, presses)
-
+    update_pointer(x, y)
+    if pointer_visible then
+        grid_set(pointer_x, pointer_y, button)
+        if button == 1 or button == 2 then
+            pointer_button = button
+        end
+    end
 end
 
 function love.mousemoved(x, y, dx, dy, istouch)
-
+    update_pointer(x, y)
+    if pointer_visible then
+        if pointer_button > 0 then
+            grid_set(pointer_x, pointer_y, pointer_button)
+        end
+    end
 end
 
 function love.mousereleased(x, y, button, istouch, presses)
+    pointer_button = 0
+end
 
+function love.mousefocus(f)
+    pointer_visible = f
 end
