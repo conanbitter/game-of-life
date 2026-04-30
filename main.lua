@@ -25,7 +25,7 @@ local grid = {}
 local COLOR_NEW = { 229.0 / 255.0, 57.0 / 255.0, 53.0 / 255.0 }
 local COLOR_OLD = { 30.0 / 255.0, 136.0 / 255.0, 229.0 / 255.0 }
 
-local STEP_LENGTH = 0.5
+local STEP_LENGTH = 0.1
 
 local pointer_x = -1
 local pointer_y = -1
@@ -50,11 +50,52 @@ local function grid_set(x, y, button)
     end
 end
 
+local function grid_get(x, y)
+    if x == -1 then
+        x = GRID_WIDTH - 1
+    end
+    if x == GRID_WIDTH then
+        x = 0
+    end
+    if y == -1 then
+        y = GRID_HEIGHT - 1
+    end
+    if y == GRID_HEIGHT then
+        y = 0
+    end
+    return grid[y][x]
+end
+
+local function grid_count_neighbors(x, y)
+    local count = 0
+    if grid_get(x - 1, y - 1).occupied then count = count + 1 end
+    if grid_get(x, y - 1).occupied then count = count + 1 end
+    if grid_get(x + 1, y - 1).occupied then count = count + 1 end
+    if grid_get(x - 1, y).occupied then count = count + 1 end
+    if grid_get(x + 1, y).occupied then count = count + 1 end
+    if grid_get(x - 1, y + 1).occupied then count = count + 1 end
+    if grid_get(x, y + 1).occupied then count = count + 1 end
+    if grid_get(x + 1, y + 1).occupied then count = count + 1 end
+    return count
+end
+
 local function step()
     for y = 0, GRID_HEIGHT - 1 do
         for x = 0, GRID_WIDTH - 1 do
             local cell = grid[y][x]
-            cell.occupied = not cell.occupied
+            local neighbors = grid_count_neighbors(x, y)
+            if cell.occupied then
+                cell.next = neighbors == 2 or neighbors == 3
+            else
+                cell.next = neighbors == 3
+            end
+        end
+    end
+
+    for y = 0, GRID_HEIGHT - 1 do
+        for x = 0, GRID_WIDTH - 1 do
+            local cell = grid[y][x]
+            cell.occupied = cell.next
         end
     end
 end
@@ -148,7 +189,7 @@ function love.keypressed(key, scancode, isrepeat)
     if isrepeat then
         return
     end
-    if key == "space" then
+    if key == "space" and not playing then
         step()
     elseif key == "return" then
         playing = not playing
