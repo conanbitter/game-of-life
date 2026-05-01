@@ -52,8 +52,10 @@ local function lerp_color(color1, color2, k)
 end
 
 local function update_pointer(x, y)
-    pointer_x = math.floor(x / CELL_SIZE)
-    pointer_y = math.floor(y / CELL_SIZE)
+    pointer_x = math.floor((x - offset_x) / CELL_SIZE)
+    pointer_y = math.floor((y - offset_y) / CELL_SIZE)
+    if pointer_x < 0 then pointer_x = pointer_x + GRID_WIDTH end
+    if pointer_y < 0 then pointer_y = pointer_y + GRID_HEIGHT end
 end
 
 local function grid_set(x, y, button)
@@ -160,6 +162,25 @@ function love.update(dt)
     end
 end
 
+local function draw_warped(x, y, quad)
+    if x < SCREEN_WIDTH + CELL_SIZE then
+        if y < SCREEN_HEIGHT + CELL_SIZE then
+            love.graphics.draw(image, quad, x, y)
+        end
+        if y > SCREEN_HEIGHT - CELL_SIZE then
+            love.graphics.draw(image, quad, x, y - SCREEN_HEIGHT)
+        end
+    end
+    if x > SCREEN_WIDTH - CELL_SIZE then
+        if y < SCREEN_HEIGHT + CELL_SIZE then
+            love.graphics.draw(image, quad, x - SCREEN_WIDTH, y)
+        end
+        if y > SCREEN_HEIGHT - CELL_SIZE then
+            love.graphics.draw(image, quad, x - SCREEN_WIDTH, y - SCREEN_HEIGHT)
+        end
+    end
+end
+
 function love.draw()
     love.graphics.setColor(1, 1, 1)
     love.graphics.draw(canvas_bg, offset_x % CELL_SIZE - CELL_SIZE, offset_y % CELL_SIZE - CELL_SIZE)
@@ -172,33 +193,35 @@ function love.draw()
                 local k = (cell.age - 1) / (MAX_LIFE - 1)
                 local cx = x * CELL_SIZE + offset_x
                 local cy = y * CELL_SIZE + offset_y
-                if cx > SCREEN_WIDTH - 1 then cx = cx - SCREEN_WIDTH end
-                if cy > SCREEN_HEIGHT - 1 then cy = cy - SCREEN_HEIGHT end
                 love.graphics.setColor(unpack(lerp_color(COLOR_NEW, COLOR_OLD, k)))
-                love.graphics.draw(image, quad_cell, cx, cy)
+                draw_warped(cx, cy, quad_cell)
             end
         end
     end
 
     if pointer_visible and not playing then
         love.graphics.setColor(1, 1, 1)
-        love.graphics.draw(image, quad_frame, CELL_SIZE * pointer_x, CELL_SIZE * pointer_y)
+        draw_warped(CELL_SIZE * pointer_x + offset_x, CELL_SIZE * pointer_y + offset_y, quad_frame)
     end
 end
 
 function love.mousepressed(x, y, button, istouch, presses)
     update_pointer(x, y)
     if pointer_button ~= 0 then return end
+
+    if button == 3 then
+        pointer_button = button
+        old_x = x
+        old_y = y
+        old_offset_x = offset_x
+        old_offset_y = offset_y
+        pointer_visible = false
+    end
+
     if pointer_visible and not playing then
         grid_set(pointer_x, pointer_y, button)
-        if button >= 1 and button <= 3 then
+        if button == 1 or button == 2 then
             pointer_button = button
-        end
-        if button == 3 then
-            old_x = x
-            old_y = y
-            old_offset_x = offset_x
-            old_offset_y = offset_y
         end
     end
 end
@@ -213,12 +236,12 @@ function love.mousemoved(x, y, dx, dy, istouch)
     if pointer_button == 3 then
         offset_x = (old_offset_x + x - old_x) % SCREEN_WIDTH
         offset_y = (old_offset_y + y - old_y) % SCREEN_HEIGHT
-        print(offset_x, offset_y)
     end
 end
 
 function love.mousereleased(x, y, button, istouch, presses)
     pointer_button = 0
+    pointer_visible = true
 end
 
 function love.mousefocus(f)
