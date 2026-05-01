@@ -36,6 +36,13 @@ local pointer_visible = false
 local current_time = 0
 local playing = false
 
+local offset_x = 0
+local offset_y = 0
+local old_offset_x = 0
+local old_offset_y = 0
+local old_x = 0
+local old_y = 0
+
 local function lerp_color(color1, color2, k)
     return {
         color1[1] * (1.0 - k) + color2[1] * k,
@@ -121,10 +128,10 @@ function love.load()
     quad_cell = love.graphics.newQuad(24, 0, 24, 24, image)
     quad_frame = love.graphics.newQuad(48, 0, 24, 24, image)
 
-    canvas_bg = love.graphics.newCanvas(SCREEN_WIDTH, SCREEN_HEIGHT)
+    canvas_bg = love.graphics.newCanvas(SCREEN_WIDTH + CELL_SIZE, SCREEN_HEIGHT + CELL_SIZE)
     love.graphics.setCanvas(canvas_bg)
-    for y = 0, GRID_HEIGHT - 1 do
-        for x = 0, GRID_WIDTH - 1 do
+    for y = 0, GRID_HEIGHT do
+        for x = 0, GRID_WIDTH do
             love.graphics.draw(image, quad_bg, x * CELL_SIZE, y * CELL_SIZE)
         end
     end
@@ -155,7 +162,7 @@ end
 
 function love.draw()
     love.graphics.setColor(1, 1, 1)
-    love.graphics.draw(canvas_bg)
+    love.graphics.draw(canvas_bg, offset_x % CELL_SIZE - CELL_SIZE, offset_y % CELL_SIZE - CELL_SIZE)
 
 
     for y = 0, GRID_HEIGHT - 1 do
@@ -163,8 +170,12 @@ function love.draw()
             local cell = grid[y][x]
             if cell.occupied then
                 local k = (cell.age - 1) / (MAX_LIFE - 1)
+                local cx = x * CELL_SIZE + offset_x
+                local cy = y * CELL_SIZE + offset_y
+                if cx > SCREEN_WIDTH - 1 then cx = cx - SCREEN_WIDTH end
+                if cy > SCREEN_HEIGHT - 1 then cy = cy - SCREEN_HEIGHT end
                 love.graphics.setColor(unpack(lerp_color(COLOR_NEW, COLOR_OLD, k)))
-                love.graphics.draw(image, quad_cell, x * CELL_SIZE, y * CELL_SIZE)
+                love.graphics.draw(image, quad_cell, cx, cy)
             end
         end
     end
@@ -177,10 +188,17 @@ end
 
 function love.mousepressed(x, y, button, istouch, presses)
     update_pointer(x, y)
+    if pointer_button ~= 0 then return end
     if pointer_visible and not playing then
         grid_set(pointer_x, pointer_y, button)
-        if button == 1 or button == 2 then
+        if button >= 1 and button <= 3 then
             pointer_button = button
+        end
+        if button == 3 then
+            old_x = x
+            old_y = y
+            old_offset_x = offset_x
+            old_offset_y = offset_y
         end
     end
 end
@@ -188,9 +206,14 @@ end
 function love.mousemoved(x, y, dx, dy, istouch)
     update_pointer(x, y)
     if pointer_visible and not playing then
-        if pointer_button > 0 then
+        if pointer_button == 1 or pointer_button == 2 then
             grid_set(pointer_x, pointer_y, pointer_button)
         end
+    end
+    if pointer_button == 3 then
+        offset_x = (old_offset_x + x - old_x) % SCREEN_WIDTH
+        offset_y = (old_offset_y + y - old_y) % SCREEN_HEIGHT
+        print(offset_x, offset_y)
     end
 end
 
