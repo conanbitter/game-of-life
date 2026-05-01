@@ -1,6 +1,8 @@
 _G.CELL_SIZE = 24
 _G.GRID_WIDTH = 50
 _G.GRID_HEIGHT = 30
+--_G.GRID_WIDTH = 80
+--_G.GRID_HEIGHT = 45
 _G.SCREEN_WIDTH = GRID_WIDTH * CELL_SIZE
 _G.SCREEN_HEIGHT = GRID_HEIGHT * CELL_SIZE
 
@@ -13,4 +15,5 @@ function love.conf(t)
     t.window.minheight = SCREEN_HEIGHT
     t.window.vsync = 1
     t.identity = "GameOfLife"
+    --    t.window.fullscreen = true
 end

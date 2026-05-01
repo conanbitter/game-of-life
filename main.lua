@@ -206,6 +206,7 @@ function love.keypressed(key, scancode, isrepeat)
     if isrepeat then
         return
     end
+    --print(key)
     if key == "space" and not playing then
         step()
     elseif key == "return" then
@@ -216,5 +217,7 @@ function love.keypressed(key, scancode, isrepeat)
         else
             love.window.setTitle("Life")
         end
+    elseif key == "escape" then
+        love.event.quit()
     end
 end
