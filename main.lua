@@ -54,8 +54,8 @@ end
 local function update_pointer(x, y)
     pointer_x = math.floor((x - offset_x) / CELL_SIZE)
     pointer_y = math.floor((y - offset_y) / CELL_SIZE)
-    if pointer_x < 0 then pointer_x = pointer_x + GRID_WIDTH end
-    if pointer_y < 0 then pointer_y = pointer_y + GRID_HEIGHT end
+    if pointer_x < 0 then pointer_x = pointer_x + GRID_COLS end
+    if pointer_y < 0 then pointer_y = pointer_y + GRID_ROWS end
 end
 
 local function grid_set(x, y, button)
@@ -70,15 +70,15 @@ end
 
 local function grid_get(x, y)
     if x == -1 then
-        x = GRID_WIDTH - 1
+        x = GRID_COLS - 1
     end
-    if x == GRID_WIDTH then
+    if x == GRID_COLS then
         x = 0
     end
     if y == -1 then
-        y = GRID_HEIGHT - 1
+        y = GRID_ROWS - 1
     end
-    if y == GRID_HEIGHT then
+    if y == GRID_ROWS then
         y = 0
     end
     return grid[y][x]
@@ -98,8 +98,8 @@ local function grid_count_neighbors(x, y)
 end
 
 local function step()
-    for y = 0, GRID_HEIGHT - 1 do
-        for x = 0, GRID_WIDTH - 1 do
+    for y = 0, GRID_ROWS - 1 do
+        for x = 0, GRID_COLS - 1 do
             local cell = grid[y][x]
             local neighbors = grid_count_neighbors(x, y)
             if cell.occupied then
@@ -110,8 +110,8 @@ local function step()
         end
     end
 
-    for y = 0, GRID_HEIGHT - 1 do
-        for x = 0, GRID_WIDTH - 1 do
+    for y = 0, GRID_ROWS - 1 do
+        for x = 0, GRID_COLS - 1 do
             local cell = grid[y][x]
             if cell.occupied and cell.next and cell.age < MAX_LIFE - 1 then
                 cell.age = cell.age + 1
@@ -130,19 +130,19 @@ function love.load()
     quad_cell = love.graphics.newQuad(24, 0, 24, 24, image)
     quad_frame = love.graphics.newQuad(48, 0, 24, 24, image)
 
-    canvas_bg = love.graphics.newCanvas(SCREEN_WIDTH + CELL_SIZE, SCREEN_HEIGHT + CELL_SIZE)
+    canvas_bg = love.graphics.newCanvas(SCREEN_WIDTH + CELL_SIZE * 2, SCREEN_HEIGHT + CELL_SIZE * 2)
     love.graphics.setCanvas(canvas_bg)
-    for y = 0, GRID_HEIGHT do
-        for x = 0, GRID_WIDTH do
+    for y = 0, GRID_ROWS + 1 do
+        for x = 0, GRID_COLS + 1 do
             love.graphics.draw(image, quad_bg, x * CELL_SIZE, y * CELL_SIZE)
         end
     end
     love.graphics.setCanvas()
 
     -- init grid
-    for y = 0, GRID_HEIGHT - 1 do
+    for y = 0, GRID_ROWS - 1 do
         grid[y] = {}
-        for x = 0, GRID_WIDTH - 1 do
+        for x = 0, GRID_COLS - 1 do
             grid[y][x] = {
                 occupied = false,
                 age = 1,
@@ -162,22 +162,27 @@ function love.update(dt)
     end
 end
 
-local function draw_warped(x, y, quad)
-    if x < SCREEN_WIDTH + CELL_SIZE then
-        if y < SCREEN_HEIGHT + CELL_SIZE then
-            love.graphics.draw(image, quad, x, y)
-        end
-        if y > SCREEN_HEIGHT - CELL_SIZE then
-            love.graphics.draw(image, quad, x, y - SCREEN_HEIGHT)
-        end
+local function draw_ywrap(x, y, quad)
+    if y < SCREEN_HEIGHT then
+        love.graphics.draw(image, quad, x, y)
     end
-    if x > SCREEN_WIDTH - CELL_SIZE then
-        if y < SCREEN_HEIGHT + CELL_SIZE then
-            love.graphics.draw(image, quad, x - SCREEN_WIDTH, y)
-        end
-        if y > SCREEN_HEIGHT - CELL_SIZE then
-            love.graphics.draw(image, quad, x - SCREEN_WIDTH, y - SCREEN_HEIGHT)
-        end
+    if y - GRID_HEIGHT + CELL_SIZE > 0 then
+        love.graphics.draw(image, quad, x, y - GRID_HEIGHT)
+    end
+    if y + GRID_HEIGHT < SCREEN_HEIGHT then
+        love.graphics.draw(image, quad, x, y + GRID_HEIGHT)
+    end
+end
+
+local function draw_wrap(x, y, quad)
+    if x < SCREEN_WIDTH then
+        draw_ywrap(x, y, quad)
+    end
+    if x - GRID_WIDTH + CELL_SIZE > 0 then
+        draw_ywrap(x - GRID_WIDTH, y, quad)
+    end
+    if x + GRID_WIDTH < SCREEN_WIDTH then
+        draw_ywrap(x + GRID_WIDTH, y, quad)
     end
 end
 
@@ -186,22 +191,22 @@ function love.draw()
     love.graphics.draw(canvas_bg, offset_x % CELL_SIZE - CELL_SIZE, offset_y % CELL_SIZE - CELL_SIZE)
 
 
-    for y = 0, GRID_HEIGHT - 1 do
-        for x = 0, GRID_WIDTH - 1 do
+    for y = 0, GRID_ROWS - 1 do
+        for x = 0, GRID_COLS - 1 do
             local cell = grid[y][x]
             if cell.occupied then
                 local k = (cell.age - 1) / (MAX_LIFE - 1)
                 local cx = x * CELL_SIZE + offset_x
                 local cy = y * CELL_SIZE + offset_y
                 love.graphics.setColor(unpack(lerp_color(COLOR_NEW, COLOR_OLD, k)))
-                draw_warped(cx, cy, quad_cell)
+                draw_wrap(cx, cy, quad_cell)
             end
         end
     end
 
     if pointer_visible and not playing then
         love.graphics.setColor(1, 1, 1)
-        draw_warped(CELL_SIZE * pointer_x + offset_x, CELL_SIZE * pointer_y + offset_y, quad_frame)
+        draw_wrap(CELL_SIZE * pointer_x + offset_x, CELL_SIZE * pointer_y + offset_y, quad_frame)
     end
 end
 
@@ -234,8 +239,8 @@ function love.mousemoved(x, y, dx, dy, istouch)
         end
     end
     if pointer_button == 3 then
-        offset_x = (old_offset_x + x - old_x) % SCREEN_WIDTH
-        offset_y = (old_offset_y + y - old_y) % SCREEN_HEIGHT
+        offset_x = (old_offset_x + x - old_x) % GRID_WIDTH
+        offset_y = (old_offset_y + y - old_y) % GRID_HEIGHT
     end
 end
 
