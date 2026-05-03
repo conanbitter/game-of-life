@@ -16,11 +16,14 @@ local quad_cell = nil
 ---@type love.Quad
 local quad_frame = nil
 
+---@type love.Quad
+local quad_bg = nil
+
 ---@type love.Canvas
 local canvas_bg = nil
 
 ---@type Cell[][]
-local grid = {}
+local grid = nil
 
 local COLOR_NEW = { 229.0 / 255.0, 57.0 / 255.0, 53.0 / 255.0 }
 local COLOR_OLD = { 30.0 / 255.0, 136.0 / 255.0, 229.0 / 255.0 }
@@ -36,12 +39,48 @@ local pointer_visible = false
 local current_time = 0
 local playing = false
 
-local offset_x = 0
-local offset_y = 0
+local offset_x = 5
+local offset_y = 5
 local old_offset_x = 0
 local old_offset_y = 0
 local old_x = 0
 local old_y = 0
+
+local function resize_grid()
+    GRID_COLS = math.floor(SCREEN_WIDTH / CELL_SIZE)
+    GRID_ROWS = math.floor(SCREEN_HEIGHT / CELL_SIZE)
+    GRID_WIDTH = GRID_COLS * CELL_SIZE
+    GRID_HEIGHT = GRID_ROWS * CELL_SIZE
+    offset_x = math.floor((SCREEN_WIDTH - GRID_WIDTH) / 2)
+    offset_y = math.floor((SCREEN_HEIGHT - GRID_HEIGHT) / 2)
+    print("Grid:", GRID_COLS, GRID_ROWS)
+
+    -- resize background
+
+    canvas_bg = love.graphics.newCanvas(GRID_WIDTH + CELL_SIZE * 2, GRID_HEIGHT + CELL_SIZE * 2)
+    love.graphics.setCanvas(canvas_bg)
+    love.graphics.setColor(1, 1, 1)
+    for y = 0, GRID_ROWS + 1 do
+        for x = 0, GRID_COLS + 1 do
+            love.graphics.draw(image, quad_bg, x * CELL_SIZE, y * CELL_SIZE)
+        end
+    end
+    love.graphics.setCanvas()
+
+    -- resize grid
+
+    grid = {}
+    for y = 0, GRID_ROWS - 1 do
+        grid[y] = {}
+        for x = 0, GRID_COLS - 1 do
+            grid[y][x] = {
+                occupied = false,
+                age = 1,
+                next = false
+            }
+        end
+    end
+end
 
 local function lerp_color(color1, color2, k)
     return {
@@ -52,10 +91,10 @@ local function lerp_color(color1, color2, k)
 end
 
 local function update_pointer(x, y)
-    pointer_x = math.floor((x - offset_x) / CELL_SIZE)
-    pointer_y = math.floor((y - offset_y) / CELL_SIZE)
-    if pointer_x < 0 then pointer_x = pointer_x + GRID_COLS end
-    if pointer_y < 0 then pointer_y = pointer_y + GRID_ROWS end
+    pointer_x = math.floor((x - offset_x) / CELL_SIZE) % GRID_COLS
+    pointer_y = math.floor((y - offset_y) / CELL_SIZE) % GRID_ROWS
+    --if pointer_x < 0 then pointer_x = pointer_x + GRID_COLS end
+    --if pointer_y < 0 then pointer_y = pointer_y + GRID_ROWS end
 end
 
 local function grid_set(x, y, button)
@@ -126,30 +165,11 @@ end
 
 function love.load()
     image = love.graphics.newImage("life.png")
-    local quad_bg = love.graphics.newQuad(0, 0, 24, 24, image)
+    quad_bg = love.graphics.newQuad(0, 0, 24, 24, image)
     quad_cell = love.graphics.newQuad(24, 0, 24, 24, image)
     quad_frame = love.graphics.newQuad(48, 0, 24, 24, image)
 
-    canvas_bg = love.graphics.newCanvas(SCREEN_WIDTH + CELL_SIZE * 2, SCREEN_HEIGHT + CELL_SIZE * 2)
-    love.graphics.setCanvas(canvas_bg)
-    for y = 0, GRID_ROWS + 1 do
-        for x = 0, GRID_COLS + 1 do
-            love.graphics.draw(image, quad_bg, x * CELL_SIZE, y * CELL_SIZE)
-        end
-    end
-    love.graphics.setCanvas()
-
-    -- init grid
-    for y = 0, GRID_ROWS - 1 do
-        grid[y] = {}
-        for x = 0, GRID_COLS - 1 do
-            grid[y][x] = {
-                occupied = false,
-                age = 1,
-                next = false
-            }
-        end
-    end
+    resize_grid()
 end
 
 function love.update(dt)
@@ -271,4 +291,14 @@ function love.keypressed(key, scancode, isrepeat)
     elseif key == "escape" then
         love.event.quit()
     end
+end
+
+function love.resize(w, h)
+    if SCREEN_WIDTH == w and SCREEN_HEIGHT == h then return end
+    print("Screen:", w, h)
+    SCREEN_WIDTH = w
+    SCREEN_HEIGHT = h
+    playing = false
+    love.window.setTitle("Life")
+    resize_grid()
 end
