@@ -54,6 +54,7 @@ local function resize_grid()
     offset_x = math.floor((SCREEN_WIDTH - GRID_WIDTH) / 2)
     offset_y = math.floor((SCREEN_HEIGHT - GRID_HEIGHT) / 2)
     print("Grid:", GRID_COLS, GRID_ROWS)
+    print("Offsets:", offset_x, offset_y)
 
     -- resize background
 
@@ -290,6 +291,9 @@ function love.keypressed(key, scancode, isrepeat)
         end
     elseif key == "escape" then
         love.event.quit()
+    elseif key == "f" then
+        local is_fullscreen = love.window.getFullscreen()
+        love.window.setFullscreen(not is_fullscreen, "desktop")
     end
 end
 
