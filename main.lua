@@ -47,6 +47,12 @@ local old_x = 0
 local old_y = 0
 
 local function resize_grid()
+    local old_cols = GRID_COLS
+    local old_rows = GRID_ROWS
+    local old_grid = grid
+    old_offset_x = offset_x
+    old_offset_y = offset_y
+
     GRID_COLS = math.floor(SCREEN_WIDTH / CELL_SIZE)
     GRID_ROWS = math.floor(SCREEN_HEIGHT / CELL_SIZE)
     GRID_WIDTH = GRID_COLS * CELL_SIZE
@@ -79,6 +85,20 @@ local function resize_grid()
                 age = 1,
                 next = false
             }
+        end
+    end
+
+    if old_grid ~= nil then
+        local grid_offset_x = math.floor((old_cols - GRID_COLS) / 2 - old_offset_x / CELL_SIZE)
+        local grid_offset_y = math.floor((old_rows - GRID_ROWS) / 2 - old_offset_y / CELL_SIZE)
+
+        for y = 0, GRID_ROWS - 1 do
+            for x = 0, GRID_COLS - 1 do
+                local ox = (x + grid_offset_x) % old_cols
+                local oy = (y + grid_offset_y) % old_rows
+                grid[y][x].occupied = old_grid[oy][ox].occupied
+                grid[y][x].age = old_grid[oy][ox].age
+            end
         end
     end
 end
